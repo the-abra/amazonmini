@@ -7,6 +7,9 @@ A modern, lightweight e-commerce platform built with vanilla PHP 8.0+ and MySQL.
 [![Docker](https://img.shields.io/badge/Docker-Available-2496ED.svg?logo=docker)](https://ghcr.io/the-abra/amazonmini)
 [![CI](https://github.com/the-abra/amazonmini/workflows/CI/badge.svg)](https://github.com/the-abra/amazonmini/actions)
 
+<img width="1272" height="937" alt="image" src="https://github.com/user-attachments/assets/f4286fa3-4bee-4697-aa45-f54f31611ca2" />
+
+
 ---
 
 ## 🚀 Features
