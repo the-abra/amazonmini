@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+README.md
+GITHUB_SETUP.md
+docs/
+*.md
+
+# Configuration (will be set via environment variables)
+config/config.local.php
+.env
+.env.local
+.env.*.local
+
+# Development
+docker/
+scripts/
+tests/
+Makefile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+vendor/
+node_modules/
+dist/
+build/
+
+# Database dumps
+*.sql
+!database/schema.sql
+!database/seed.sql

@@ -1,0 +1,44 @@
+# Sensitive Configuration
+config/config.local.php
+
+# Dependencies
+vendor/
+node_modules/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# Build Artifacts
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.sql
+!database/schema.sql
+!database/seed.sql
+
+# Uploads (if you add file upload feature)
+public/uploads/*
+!public/uploads/.gitkeep
