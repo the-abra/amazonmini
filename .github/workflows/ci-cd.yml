@@ -1,0 +1,168 @@
+name: CI & Docker Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*.*.*'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+  pull_request:
+    branches: [ main, develop ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: the-abra/amazonmini
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: ecommerce_test
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, pdo, pdo_mysql, json
+        coverage: none
+
+    - name: Validate PHP syntax
+      run: |
+        find app config -name "*.php" -print0 | xargs -0 -n1 php -l
+        php -l index.php
+
+    - name: Check PHP code style
+      run: |
+        echo "✅ PHP syntax validation passed"
+
+    - name: Wait for MySQL
+      run: |
+        until mysqladmin ping -h "127.0.0.1" --silent; do
+          echo "Waiting for MySQL..."
+          sleep 2
+        done
+        echo "✅ MySQL is ready"
+
+    - name: Import database schema
+      run: |
+        mysql -h 127.0.0.1 -u test_user -ptest_password ecommerce_test < database/schema.sql
+        mysql -h 127.0.0.1 -u test_user -ptest_password ecommerce_test < database/seed.sql
+
+    - name: Verify database tables
+      run: |
+        mysql -h 127.0.0.1 -u test_user -ptest_password ecommerce_test -e "SHOW TABLES;"
+
+    - name: Test database connection
+      env:
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_NAME: ecommerce_test
+        DB_USER: test_user
+        DB_PASS: test_password
+      run: |
+        php -r "
+        \$pdo = new PDO(
+          'mysql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT') . ';dbname=' . getenv('DB_NAME'),
+          getenv('DB_USER'),
+          getenv('DB_PASS')
+        );
+        echo '✅ Database connection successful\n';
+        \$stmt = \$pdo->query('SELECT COUNT(*) FROM users');
+        echo '✅ Users count: ' . \$stmt->fetchColumn() . '\n';
+        "
+
+    - name: Security check - No sensitive files
+      run: |
+        if [ -f "config/config.local.php" ] || [ -f ".env" ]; then
+          echo "❌ ERROR: Sensitive configuration files found in repository!"
+          exit 1
+        fi
+        echo "✅ No sensitive files found"
+
+    - name: Verify required files
+      run: |
+        test -f "index.php"
+        test -f "config/config.example.php"
+        test -f "database/schema.sql"
+        test -f "database/seed.sql"
+        echo "✅ Required files verified"
+
+  build-and-push:
+    name: Build & Push Docker Image
+    needs: lint-and-test
+    # Yalnızca CI geçtiğinde ve main branch'e push ya da tag basıldığında imaj üretir
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels)
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./docker/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        platforms: linux/amd64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Image digest
+      run: echo "Digest -> ${{ steps.meta.outputs.digest }}"
