@@ -5,18 +5,16 @@
 
 # Documentation
 README.md
-GITHUB_SETUP.md
 docs/
 *.md
 
-# Configuration (will be set via environment variables)
+# Configuration
 config/config.local.php
 .env
 .env.local
 .env.*.local
 
 # Development
-docker/
 scripts/
 tests/
 Makefile
