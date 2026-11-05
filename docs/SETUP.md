@@ -108,13 +108,7 @@ return [
 ### Step 6: Start Development Server
 
 ```bash
-php -S localhost:8080 -t public
-```
-
-Or use a specific port:
-
-```bash
-php -S localhost:3000 -t public
+php -S localhost:8080
 ```
 
 ### Step 7: Access the Application
